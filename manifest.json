@@ -1,0 +1,16 @@
+{
+  "name": "Lapsly — Since You Last Did It",
+  "short_name": "Lapsly",
+  "description": "No-streak tracker for the things you don't do every day. Tap when you do it, see how long it's been. No guilt, no penalty.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#111017",
+  "theme_color": "#111017",
+  "categories": ["productivity", "lifestyle"],
+  "icons": [
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
