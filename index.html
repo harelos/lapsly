@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111017">
+<title>Lapsly — Since you last did it</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#111017;--p1:#19171F;--line:#2A2732;--ink:#F1EFF7;--mut:#948FA3;--dim:#5C5768;--acc:#9B90F5;--warm:#E8A33D}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font-family:'Space Grotesk',system-ui,sans-serif;min-height:100vh;min-height:100dvh}
+.wrap{max-width:440px;margin:0 auto;padding:24px 20px 44px}
+.mono{font-family:'Space Mono',monospace;font-variant-numeric:tabular-nums}
+.eyebrow{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+h1{font-size:27px;font-weight:700;letter-spacing:-.02em;line-height:1.08}
+.card{background:var(--p1);border:1px solid var(--line);border-radius:14px;padding:18px}
+.btn{display:block;width:100%;padding:14px;border:none;border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
+.btn:active{transform:scale(.98)}
+.btn-acc{background:var(--acc);color:#111017}
+.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--mut);font-size:13px;padding:11px}
+input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:13px;color:var(--ink);font-family:'Space Grotesk',sans-serif;font-size:15px;outline:none}
+input:focus{border-color:var(--acc)}
+label{display:block;font-size:12px;color:var(--mut);margin:13px 0 6px;font-weight:500}
+.ev{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--line)}
+.ev:last-child{border:none}
+.days{font-family:'Space Mono',monospace;font-variant-numeric:tabular-nums;font-size:34px;font-weight:700;line-height:1;min-width:78px}
+.dlabel{font-size:9px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin-top:2px}
+.ename{font-size:16px;font-weight:600}
+.edate{font-family:'Space Mono',monospace;font-size:10.5px;color:var(--dim);margin-top:3px;letter-spacing:.06em}
+.did{background:var(--acc);color:#111017;border:none;border-radius:9px;padding:9px 13px;font-family:'Space Grotesk',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--p1);border:1px solid var(--acc);color:var(--acc);padding:10px 20px;border-radius:10px;font-family:'Space Mono',monospace;font-size:12px;z-index:200}
+.hidden{display:none!important}
+.locklist{opacity:.4;pointer-events:none;filter:blur(1.5px)}
+</style>
+<link rel="manifest" href="manifest.json">
+<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js")</script>
+</head>
+<body>
+<div class="wrap">
+
+<div class="eyebrow">LAPSLY</div>
+<h1 style="margin:8px 0 6px">No streaks.<br><span style="color:var(--acc)">Just since.</span></h1>
+<p style="color:var(--mut);font-size:13.5px;line-height:1.55;margin-bottom:16px">Watered the plants. Changed the filter. Called your mom. Not every good habit needs a streak — some just need a number. Tap it when you do the thing. That's it.</p>
+
+<div class="card hidden" id="listcard">
+  <div class="eyebrow" style="color:var(--dim);margin-bottom:2px">SINCE YOU LAST...</div>
+  <div id="events"></div>
+</div>
+
+<div style="height:10px"></div>
+<button class="btn btn-ghost" id="addbtn" onclick="toggleAdd()">+ Track something</button>
+
+<div class="card hidden" id="addform" style="margin-top:10px">
+  <label>What are you tracking</label>
+  <input id="n-name" placeholder="Watered plants, changed filter, called mom...">
+  <label>Last time you did it</label>
+  <input id="n-date" type="date">
+  <div style="height:14px"></div>
+  <button class="btn btn-acc" onclick="addEvent()">Start tracking</button>
+</div>
+
+<p style="color:var(--dim);font-size:11px;margin-top:18px;text-align:center">No account. No ads. No penalty for a bad week — just tap "done" and move on.</p>
+
+</div>
+<script>
+const store={m:{},get(k,d){try{const v=localStorage.getItem('lp_'+k);return v!==null?JSON.parse(v):d}catch(e){return k in this.m?this.m[k]:d}},set(k,v){try{localStorage.setItem('lp_'+k,JSON.stringify(v))}catch(e){this.m[k]=v}}};
+let events=store.get('events',[]);
+const FREE_LIMIT=3;
+function save(){store.set('events',events)}
+function toggleAdd(){
+  if(!Billing.isPro() && events.length>=FREE_LIMIT){Billing.requirePro('limit');return}
+  document.getElementById('addform').classList.toggle('hidden')
+}
+function addEvent(){
+  const n=document.getElementById('n-name').value.trim();
+  const d=document.getElementById('n-date').value || todayStr();
+  if(!n){toast('NAME IT FIRST');return}
+  events.push({id:Date.now(),name:n,date:d});
+  save();
+  document.getElementById('n-name').value='';document.getElementById('n-date').value='';
+  document.getElementById('addform').classList.add('hidden');render();
+  toast('TRACKING · '+n.toUpperCase());
+}
+function markDone(id,e){
+  if(e)e.stopPropagation();
+  const ev=events.find(x=>x.id===id);
+  ev.date=todayStr();save();render();
+  toast('NICE — RESET TO 0 DAYS');
+}
+function removeEv(id){
+  const e=events.find(x=>x.id===id);
+  if(!confirm('Stop tracking "'+e.name+'"?'))return;
+  events=events.filter(x=>x.id!==id);save();render();
+}
+function todayStr(){const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0')}
+function daysSince(dateStr){
+  const now=new Date();now.setHours(0,0,0,0);
+  const then=new Date(dateStr+'T00:00:00');
+  return Math.max(0,Math.round((now-then)/86400000));
+}
+function render(){
+  const lc=document.getElementById('listcard');
+  lc.classList.toggle('hidden',events.length===0);
+  const sorted=[...events].sort((a,b)=>daysSince(b.date)-daysSince(a.date));
+  document.getElementById('events').innerHTML=sorted.map((e,i)=>{
+    const d=daysSince(e.date);
+    const locked=!Billing.isPro() && i>=FREE_LIMIT;
+    return `<div class="ev" ${locked?'':'onclick="removeEv('+e.id+')"'}>
+      <div>
+        <div class="days" style="color:${d===0?'var(--warm)':'var(--acc)'}">${d}</div>
+        <div class="dlabel">${d===1?'DAY AGO':'DAYS AGO'}</div>
+      </div>
+      <div style="flex:1">
+        <div class="ename">${esc(e.name)}</div>
+        <div class="edate">LAST · ${new Date(e.date+'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}).toUpperCase()}</div>
+      </div>
+      <button class="did" onclick="markDone(${e.id},event)" ${locked?'disabled':''}>Did it ✓</button>
+      </div>`;
+  }).join('');
+  const locklist=document.getElementById('events');
+  if(!Billing.isPro() && events.length>FREE_LIMIT){
+    locklist.innerHTML+=`<div style="text-align:center;padding:14px 0 4px"><button class="btn-ghost" style="background:none;border:none;color:var(--acc);font-size:12.5px;font-weight:700;cursor:pointer" onclick="Billing.openPaywall('limit')">+ ${events.length-FREE_LIMIT} more · Unlock unlimited →</button></div>`;
+  }
+}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
+document.addEventListener('lapsly-pro-changed',render);
+render();
+</script>
+<script src="billing.js"></script>
+</body>
+</html>
